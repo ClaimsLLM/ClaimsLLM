@@ -6,6 +6,12 @@ from src.user import User
 from src.router import get_response
 from src.util import typing_effect, add_chat_session_details, add_user_session_details
 
+from src.retriever import setup_qachain, setup_qachain_claims
+
+# Initialize QA chain
+qa_chain = setup_qachain()
+qa_chain_claims = setup_qachain_claims()
+
 
 
 
@@ -101,30 +107,25 @@ if prompt := chat_input:
         get_response(prompt, st.session_state.user, st, chat_input)
         
     elif st.session_state.next_question == "policy_claim_query": 
-        if "policy" in prompt.lower(): 
-            st.session_state.next_question = "policy_query"
-            
-            response  = "Kindly enter your query related to policy"
-            add_chat_session_details(st, response)
-            typing_effect(st, response)
-            
-        elif "claim" in prompt.lower():
+        
+        if "claim" in prompt.lower():
             st.session_state.claim_form_enabled = True
             st.session_state.next_question = "claim_form"
             response = "Please upload your claim form here"
             add_chat_session_details(st, response)
             typing_effect(st, response)
+        
+        else: 
+            response = qa_chain(prompt+"for policy number "+st.session_state.user.selected_policy_number)
+            add_chat_session_details(st, response)
+            typing_effect(st, response)
             
-    elif st.session_state.next_question == "policy_query":
-        response = process_policy_query(st.session_state.user.selected_policy_number, prompt)
-        add_chat_session_details(st, response)
-        typing_effect(st, response)
-        
-        response = "Do you have any other query? if yes then enter policy query or claim query"
-        add_chat_session_details(st, response)
-        typing_effect(st, response)
-        
-        st.session_state.next_question = "policy_claim_query"
+            response = "Do you have any other query? if yes then enter policy query or claim query"
+            add_chat_session_details(st, response)
+            typing_effect(st, response)
+            
+            st.session_state.next_question = "policy_claim_query"
+       
         
     elif st.session_state.next_question == "claim_query":
         response = process_claim_query(st.session_state.user.claim_form,st.session_state.user.selected_policy_number, prompt)
@@ -160,7 +161,7 @@ if st.session_state.next_question == "policy_selection":
         
         st.session_state.user.selected_policy_number = policy_number
         
-        response = "Your policy number has been successfully selected. Now select if you have policy related query or claim related query."
+        response = "Your policy number has been successfully selected. Now you can enter your query regarding policy or claim."
         add_chat_session_details(st, response)
         typing_effect(st, response)
         

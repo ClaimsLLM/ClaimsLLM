@@ -1,5 +1,6 @@
 # GGML Models
 models/*.bin
+models/.xdp-Unconfirmed 697536.crdownload-B7xpFE
 
 # PPT decks
 *.pptx
