@@ -3,9 +3,10 @@ VECTOR_COUNT: 2
 CHUNK_SIZE: 500
 CHUNK_OVERLAP: 50
 DATA_PATH: 'data/'
+DATA_PATH_WORDING: 'data/policy_wording'
 DB_FAISS_PATH: 'vectorstore/db_faiss'
 DB_FAISS_PATH_CLAIMS: 'vectorstore/db_faiss_claims'
 MODEL_TYPE: 'llama'
 MODEL_BIN_PATH: 'models/llama-2-7b-chat.ggmlv3.q8_0.bin'
 MAX_NEW_TOKENS: 256
-TEMPERATURE: 0.01
+TEMPERATURE: 0.5

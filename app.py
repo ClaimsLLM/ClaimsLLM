@@ -1,14 +1,18 @@
+import os
 import streamlit as st
+import tempfile
 import random
-import time
+import timeit
 from src.prompts import get_initial_message
 from src.user import User
 from src.router import get_response
 from src.util import typing_effect, add_chat_session_details, add_user_session_details
 
+from src.retriever import setup_qachain, setup_qachain_claims, run_db_build_claims
 
-
-
+# Initialize QA chain
+qa_chain = setup_qachain()
+qa_chain_claims = setup_qachain_claims()
 # Temporary functions
 
 def process_policy_query(policy_no, prompt):
@@ -101,46 +105,53 @@ if prompt := chat_input:
         get_response(prompt, st.session_state.user, st, chat_input)
         
     elif st.session_state.next_question == "policy_claim_query": 
-        if "policy" in prompt.lower(): 
-            st.session_state.next_question = "policy_query"
+        
+        if "claim" in prompt.lower():
+            if not st.session_state.user.claim_form: 
+                st.session_state.claim_form_enabled = True
+                st.session_state.next_question = "claim_form"
+                response = "Please upload your claim form here"
+                add_chat_session_details(st, response)
+                typing_effect(st, response)
+            else:
+                response = qa_chain_claims.run(prompt+"for policy number "+st.session_state.user.selected_policy_number)
+                 
+                add_chat_session_details(st, response)
+                typing_effect(st, response)
+                
+                response = "Do you have any other query?"
+                add_chat_session_details(st, response)
+                typing_effect(st, response)
+                
+                st.session_state.next_question = "policy_claim_query"
+        
+        else: 
+            message_placeholder = st.empty()
             
-            response  = "Kindly enter your query related to policy"
+            message_placeholder.info("Please wait while we fetch your policy details...")
+            start = timeit.default_timer()
+            response = qa_chain.run(prompt+st.session_state.user.selected_policy_number)
+            
+            message_placeholder.empty()
+            
+            print("response",response)
+            end = timeit.default_timer()
+            print(f"Time to retrieve response: {end - start}")
+            
+            # # Create a spinner while the response is being generated
+            # with st.spinner("Generating response..."):
+            #     time.sleep(2)
+                
+            
             add_chat_session_details(st, response)
             typing_effect(st, response)
             
-        elif "claim" in prompt.lower():
-            st.session_state.claim_form_enabled = True
-            st.session_state.next_question = "claim_form"
-            response = "Please upload your claim form here"
+            response = "Do you have any other query? if yes then enter policy query or claim query"
             add_chat_session_details(st, response)
             typing_effect(st, response)
             
-    elif st.session_state.next_question == "policy_query":
-        response = process_policy_query(st.session_state.user.selected_policy_number, prompt)
-        add_chat_session_details(st, response)
-        typing_effect(st, response)
-        
-        response = "Do you have any other query? if yes then enter policy query or claim query"
-        add_chat_session_details(st, response)
-        typing_effect(st, response)
-        
-        st.session_state.next_question = "policy_claim_query"
-        
-    elif st.session_state.next_question == "claim_query":
-        response = process_claim_query(st.session_state.user.claim_form,st.session_state.user.selected_policy_number, prompt)
-        add_chat_session_details(st, response)
-        typing_effect(st, response)
-        
-        
-        response = "Do you have any other query? if yes then enter policy query or claim query"
-        add_chat_session_details(st, response)
-        typing_effect(st, response)
-        
-        st.session_state.next_question = "policy_claim_query"
-        
-        
-            
-        
+            st.session_state.next_question = "policy_claim_query"
+
             
 
 if st.session_state.next_question == "policy_selection":
@@ -160,7 +171,7 @@ if st.session_state.next_question == "policy_selection":
         
         st.session_state.user.selected_policy_number = policy_number
         
-        response = "Your policy number has been successfully selected. Now select if you have policy related query or claim related query."
+        response = "Your policy number has been successfully selected. Now you can enter your query regarding policy or claim."
         add_chat_session_details(st, response)
         typing_effect(st, response)
         
@@ -178,11 +189,29 @@ if st.session_state.claim_form_enabled:
         
         st.session_state.user.claim_form = file_uploader
         
+        temp_dir = tempfile.TemporaryDirectory()
+
+        temp_file_path = os.path.join(temp_dir.name, file_uploader.name)
+
+        print(temp_file_path)
+
+        with open(temp_file_path, "wb") as temp_file:            
+
+            temp_file.write(file_uploader.read())
+
+       
+
+        # loaded_text=pdf_to_pages(uploaded_file)
+
+        run_db_build_claims(temp_file_path)
+        
+        
+        
         response = "Your claim form has been successfully uploaded. Now enter your query related to claim."
         add_chat_session_details(st, response)
         typing_effect(st, response)
         
-        st.session_state.next_question = "claim_query"
+        st.session_state.next_question = "policy_claim_query"
         st.session_state.claim_form_enabled = False
         
         
