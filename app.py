@@ -116,7 +116,15 @@ if prompt := chat_input:
             typing_effect(st, response)
         
         else: 
-            response = qa_chain(prompt+"for policy number "+st.session_state.user.selected_policy_number)
+            response = qa_chain.run(prompt+"for policy number "+st.session_state.user.selected_policy_number)
+            
+            print("response",response)
+            
+            # Create a spinner while the response is being generated
+            with st.spinner("Generating response..."):
+                time.sleep(2)
+                
+            
             add_chat_session_details(st, response)
             typing_effect(st, response)
             
