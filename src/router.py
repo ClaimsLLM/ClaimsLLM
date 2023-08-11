@@ -76,6 +76,7 @@ def get_response(prompt:str, user:User, st, chat_input):
                 
                 message_placeholder.markdown(message)
                 add_chat_session_details(st, message+"<br>")
+                st.session_state.next_question = "policy_selection"
                 
     
     elif prompt.startswith("P"):
