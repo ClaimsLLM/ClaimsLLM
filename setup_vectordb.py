@@ -39,5 +39,21 @@ def run_db_build():
     vectorstore = FAISS.from_documents(texts, embeddings)
     vectorstore.save_local(cfg.DB_FAISS_PATH)
 
+def run_db_build_policywordings():
+    loader = DirectoryLoader(cfg.DATA_PATH_WORDING,
+                             glob='*.pdf',
+                             loader_cls=PyPDFLoader)
+    documents = loader.load()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=cfg.CHUNK_SIZE,
+                                                   chunk_overlap=cfg.CHUNK_OVERLAP)
+    texts = text_splitter.split_documents(documents)
+
+    embeddings = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2',
+                                       model_kwargs={'device': 'cpu'})
+
+    vectorstore = FAISS.from_documents(texts, embeddings)
+    vectorstore.save_local(cfg.DB_FAISS_PATH_CLAIMS)
+
 if __name__ == "__main__":
     run_db_build()
+    run_db_build_policywordings()

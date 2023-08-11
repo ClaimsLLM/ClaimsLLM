@@ -2,7 +2,7 @@ import os
 import streamlit as st
 import tempfile
 import random
-import time
+import timeit
 from src.prompts import get_initial_message
 from src.user import User
 from src.router import get_response
@@ -13,10 +13,6 @@ from src.retriever import setup_qachain, setup_qachain_claims, run_db_build_clai
 # Initialize QA chain
 qa_chain = setup_qachain()
 qa_chain_claims = setup_qachain_claims()
-
-
-
-
 # Temporary functions
 
 def process_policy_query(policy_no, prompt):
@@ -133,12 +129,14 @@ if prompt := chat_input:
             message_placeholder = st.empty()
             
             message_placeholder.info("Please wait while we fetch your policy details...")
-            
-            response = qa_chain.run(prompt+"for policy number "+st.session_state.user.selected_policy_number)
+            start = timeit.default_timer()
+            response = qa_chain.run(prompt+st.session_state.user.selected_policy_number)
             
             message_placeholder.empty()
             
             print("response",response)
+            end = timeit.default_timer()
+            print(f"Time to retrieve response: {end - start}")
             
             # # Create a spinner while the response is being generated
             # with st.spinner("Generating response..."):
