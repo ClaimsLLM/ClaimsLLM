@@ -8,7 +8,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.llms import CTransformers
-from dotenv import find_dotenv, load_dotenv
+
 
 
 # Import config vars
@@ -46,6 +46,21 @@ def run_db_build():
 
     vectorstore = FAISS.from_documents(texts, embeddings)
     vectorstore.save_local(cfg.DB_FAISS_PATH)
+
+def run_db_build_claims():
+    loader = DirectoryLoader(cfg.DATA_PATH,
+                             glob='*.pdf',
+                             loader_cls=PyPDFLoader)
+    documents = loader.load()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=cfg.CHUNK_SIZE,
+                                                   chunk_overlap=cfg.CHUNK_OVERLAP)
+    texts = text_splitter.split_documents(documents)
+
+    embeddings = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2',
+                                       model_kwargs={'device': 'cpu'})
+
+    vectorstore_claims = FAISS.from_documents(texts, embeddings)
+    vectorstore_claims.save_local(cfg.DB_FAISS_PATH_CLAIMS)
     
 
 def set_qa_prompt():
@@ -62,34 +77,50 @@ def set_qa_prompt():
                             input_variables=['context', 'question'])
     return prompt
 
-def build_llm():
+
     # Local CTransformers model
+def build_llm():
     llm = CTransformers(model=cfg.MODEL_BIN_PATH,
                         model_type=cfg.MODEL_TYPE,                        
                         config={'max_new_tokens': cfg.MAX_NEW_TOKENS,
                                 'temperature': cfg.TEMPERATURE}
                         )
-
     return llm
 
-def build_retrieval_qa(llm, prompt, vectordb):
-    dbqa = RetrievalQA.from_chain_type(llm=llm,
-                                       chain_type='stuff',
-                                       retriever=vectordb.as_retriever(search_kwargs={'k': cfg.VECTOR_COUNT}),
-                                       return_source_documents=cfg.RETURN_SOURCE_DOCUMENTS,
-                                       chain_type_kwargs={'prompt': prompt}
-                                       )
-    return dbqa
 
-def setup_dbqa():
+
+def setup_qachain():
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2",
                                        model_kwargs={'device': 'cpu'})
     vectordb = FAISS.load_local(cfg.DB_FAISS_PATH, embeddings)
     llm = build_llm()
     qa_prompt = set_qa_prompt()
-    dbqa = build_retrieval_qa(llm, qa_prompt, vectordb)
+    qa_chain=RetrievalQA.from_chain_type(llm=llm,
+                                       chain_type='stuff',
+                                       retriever=vectordb.as_retriever(search_kwargs={'k': cfg.VECTOR_COUNT}),
+                                       return_source_documents=cfg.RETURN_SOURCE_DOCUMENTS,
+                                       chain_type_kwargs={'prompt': qa_prompt}
+                                       )
+    
+    return qa_chain
 
-    return dbqa
+def setup_qachain_claims():
+    
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2",
+                                       model_kwargs={'device': 'cpu'})
+    vectordb = FAISS.load_local(cfg.DB_FAISS_PATH, embeddings)
+    vectordb_claims=FAISS.load_local(cfg.DB_FAISS_PATH_CLAIMS, embeddings)
+    vectordb.merge_from(vectordb_claims)
+    llm = build_llm()
+    qa_prompt = set_qa_prompt()
+    qa_chain=RetrievalQA.from_chain_type(llm=llm,
+                                       chain_type='stuff',
+                                       retriever=vectordb.as_retriever(search_kwargs={'k': cfg.VECTOR_COUNT}),
+                                       return_source_documents=cfg.RETURN_SOURCE_DOCUMENTS,
+                                       chain_type_kwargs={'prompt': qa_prompt}
+                                       )
+    
+    return qa_chain
 
    
 # if __name__ == "__main__":

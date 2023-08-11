@@ -4,8 +4,8 @@ import yaml
 import argparse
 import streamlit as st
 from dotenv import find_dotenv, load_dotenv
-from src.retriever import setup_dbqa,run_db_build
-from langchain.callbacks import StreamlitCallbackHandler
+from src.retriever import setup_qachain,run_db_build,setup_qachain_claims
+
 
 # Load environment variables from .env file
 load_dotenv(find_dotenv())
@@ -16,7 +16,7 @@ with open('config/config.yml', 'r', encoding='utf8') as ymlfile:
 
 
 if __name__ == "__main__":
-    run_db_build()
+    # run_db_build()
     parser = argparse.ArgumentParser()
     parser.add_argument('input',
                         type=str,
@@ -26,20 +26,21 @@ if __name__ == "__main__":
 
     # Setup DBQA
     start = timeit.default_timer()
-    dbqa = setup_dbqa()
-    response = dbqa({'query': args.input})
+    qachain = setup_qachain()
+    response = qachain.run({'query': args.input})
     end = timeit.default_timer()
+    print(f'\nAnswer: {response}')
 
-    print(f'\nAnswer: {response["result"]}')
+    # print(f'\nAnswer: {response["result"]}')
     print('='*50)
 
     # Process source documents
-    source_docs = response['source_documents']
-    for i, doc in enumerate(source_docs):
-        print(f'\nSource Document {i+1}\n')
-        print(f'Source Text: {doc.page_content}')
-        print(f'Document Name: {doc.metadata["source"]}')
-        print(f'Page Number: {doc.metadata["page"]}\n')
-        print('='* 60)
+    # source_docs = response['source_documents']
+    # for i, doc in enumerate(source_docs):
+    #     print(f'\nSource Document {i+1}\n')
+    #     print(f'Source Text: {doc.page_content}')
+    #     print(f'Document Name: {doc.metadata["source"]}')
+    #     print(f'Page Number: {doc.metadata["page"]}\n')
+    #     print('='* 60)
 
     print(f"Time to retrieve response: {end - start}")
