@@ -29,7 +29,6 @@ def build_sqlite_db():
         VALUES (?, ?, ?, ?, ?, ?)
     '''
     values_to_insert = [        
-        ("2311 1002 2924 3401 000","MS SANCHAREE DAS","KA-03-MW-5618" , 14352, "From 03 Sep, 2018 00:01 hrs To 02 Sep, 2019 Midnight",9739000376),
         ("3362/02405675/000/00","Mr. Rishabh Sood", "KA53MC5013", 4714, "From 15/10/2022 00:00 to 14/10/2023 23:59",9582394818),    
         ("1704003123P104849149","MR UMAPATHI K", "TN - 37 - AW - 9914", 784,"From 00:00 Hrs of 04/08/2023 To Midnight of 03/08/2024",9994322446)
     ]
